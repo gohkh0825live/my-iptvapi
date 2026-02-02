@@ -3,7 +3,6 @@ name: 'Update schedule'
 on:
   schedule:
     # 每天北京时间凌晨 04:35 自动运行一次 (UTC 20:35)
-    # 避开整点是为了防止 GitHub 系统的并发排队，运行更稳定
     - cron: '35 20 * * *'
   workflow_dispatch: # 保留手动触发按钮
 
@@ -16,10 +15,10 @@ jobs:
     steps:
       - name: Set branch name
         id: vars
-        # 既然你已经是独立仓库，分支通常是 master 或 main
-        run: echo "BRANCH_NAME=${{ github.repository_owner == 'Guovin' && 'gd' || 'master' }}" >> $GITHUB_ENV
+        # 【重要修复】直接指定分支为 main，解决 "fetch failed" 错误
+        run: echo "BRANCH_NAME=main" >> $GITHUB_ENV
       
-      - uses: actions/checkout@v4 # 建议升级到 v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ env.BRANCH_NAME }}
           
@@ -49,5 +48,6 @@ jobs:
           git add .
           if ! git diff --staged --quiet; then
             git commit -m "Github Action Auto Updated"
-            git push --force
+            # 确保推送到 main 分支
+            git push origin main --force
           fi
