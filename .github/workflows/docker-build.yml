@@ -3,7 +3,7 @@ name: Build and Push Docker Images
 on:
   workflow_dispatch:
     branches:
-      - master
+      - main  # 修正 1: 必须改为 main，否则无法手动触发
 
 jobs:
   build:
@@ -11,7 +11,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4 # 优化: 升级到 v4
 
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -20,23 +20,26 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
-        uses: docker/login-action@v2
+        uses: docker/login-action@v3 # 优化: 升级到 v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
       - name: Get version from version.json
+        # 优化: 使用 Linux 原生命令提取版本号，比 pwsh 更快
+        shell: bash
         run: |
-          $version = (Get-Content version.json | ConvertFrom-Json).version
-          echo "version=$version" >> $env:GITHUB_ENV
-        shell: pwsh
+          VERSION=$(jq -r .version version.json)
+          echo "version=$VERSION" >> $GITHUB_ENV
 
       - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+        uses: docker/build-push-action@v6 # 优化: 升级到 v6
         with:
           context: .
           push: true
+          # 修正 2: 这里的 guovern 必须改为你的用户名变量
+          # 否则会报 "access denied" 错误
           tags: |
-            guovern/iptv-api:latest
-            guovern/iptv-api:${{ env.version }}
+            ${{ secrets.DOCKER_USERNAME }}/my-iptvapi:latest
+            ${{ secrets.DOCKER_USERNAME }}/my-iptvapi:${{ env.version }}
           platforms: linux/amd64,linux/arm64,linux/arm/v7
